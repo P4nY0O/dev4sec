@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini-HIDS Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-value {
+            font-size: 3em;
+            font-weight: bold;
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 1.1em;
+            font-weight: 500;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .agents, .logs {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-title {
+            color: #2c3e50;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 25px;
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            border-radius: 2px;
+        }
+
+        .agent-item {
+            padding: 20px;
+            border-bottom: 1px solid #ecf0f1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.3s ease;
+        }
+
+        .agent-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .agent-item:last-child {
+            border-bottom: none;
+        }
+
+        .agent-info h3 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-size: 1.1em;
+        }
+
+        .agent-info small {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .agent-status {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+
+        .status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            color: white;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status.online {
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+            box-shadow: 0 2px 10px rgba(46, 204, 113, 0.3);
+        }
+
+        .status.warning {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            box-shadow: 0 2px 10px rgba(243, 156, 18, 0.3);
+        }
+
+        .status.offline {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            box-shadow: 0 2px 10px rgba(231, 76, 60, 0.3);
+        }
+
+        .record-count {
+            color: #7f8c8d;
+            font-size: 0.8em;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 40px;
+        }
+
+        .loading {
+            text-align: center;
+            color: #3498db;
+            padding: 40px;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #3498db;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .log-item {
+            padding: 15px;
+            border-left: 4px solid #3498db;
+            background: #f8f9fa;
+            margin-bottom: 10px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .log-time {
+            color: #7f8c8d;
+            font-size: 0.8em;
+            margin-bottom: 5px;
+        }
+
+        .log-message {
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+            
+            .agent-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .agent-status {
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ Mini-HIDS Dashboard</h1>
+            <p>主机入侵检测系统 - 实时监控面板</p>
+            <button class="refresh-btn" onclick="loadData()">🔄 刷新数据</button>
+        </div>
+        
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="stat-value">-</div>
+                <div class="stat-label">总代理数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">-</div>
+                <div class="stat-label">活跃代理</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">-</div>
+                <div class="stat-label">总记录数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">-</div>
+                <div class="stat-label">运行时间</div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="agents">
+                <h2 class="section-title">📡 代理列表</h2>
+                <div id="agents-list" class="loading">
+                    正在加载代理信息...
+                </div>
+            </div>
+            
+            <div class="logs">
+                <h2 class="section-title">📋 系统日志</h2>
+                <div id="logs-list">
+                    <div class="log-item">
+                        <div class="log-time">系统启动时间</div>
+                        <div class="log-message">Mini-HIDS 监控系统已启动</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let logs = [
+            {
+                time: new Date().toLocaleString(),
+                message: 'Mini-HIDS 监控系统已启动'
+            }
+        ];
+
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+                
+                document.getElementById('stats').innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.total_agents}</div>
+                        <div class="stat-label">总代理数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.active_agents}</div>
+                        <div class="stat-label">活跃代理</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.total_records}</div>
+                        <div class="stat-label">总记录数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${formatUptime(stats.server_uptime)}</div>
+                        <div class="stat-label">运行时间</div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+                addLog('统计信息加载失败: ' + error.message);
+            }
+        }
+        
+        async function loadAgents() {
+            try {
+                const response = await fetch('/api/agents');
+                const data = await response.json();
+                
+                const agentsList = document.getElementById('agents-list');
+                if (data.agents && data.agents.length > 0) {
+                    // 为每个agent加载详细信息
+                    let agentsHtml = '';
+                    for (const agent of data.agents) {
+                        agentsHtml += await generateAgentDetailHtml(agent);
+                    }
+                    agentsList.innerHTML = agentsHtml;
+                    
+                    // 检查新代理
+                    checkNewAgents(data.agents);
+                } else {
+                    agentsList.innerHTML = '<div class="no-data">🔍 暂无代理连接</div>';
+                }
+            } catch (error) {
+                console.error('Failed to load agents:', error);
+                document.getElementById('agents-list').innerHTML = '<div class="no-data">❌ 加载失败</div>';
+                addLog('代理列表加载失败: ' + error.message);
+            }
+        }
+        
+        async function generateAgentDetailHtml(agent) {
+            try {
+                // 获取agent详细信息
+                const response = await fetch(`/api/agents/${agent.agent_id}`);
+                const data = await response.json();
+                
+                let agentHtml = `
+                    <div class="agent-item" style="flex-direction: column; align-items: stretch; padding: 25px; margin-bottom: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <div class="agent-info">
+                                <h3>🖥️ ${agent.hostname}</h3>
+                                <small>ID: ${agent.agent_id}</small><br>
+                                <small>最后上报: ${new Date(agent.last_seen).toLocaleString()}</small>
+                            </div>
+                            <div class="agent-status">
+                                <span class="status ${agent.status}">${getStatusText(agent.status)}</span>
+                                <span class="record-count">${agent.data_count} 条记录</span>
+                            </div>
+                        </div>
+                `;
+                
+                if (data.data && data.data.length > 0) {
+                    const latestData = data.data[0];
+                    
+                    // 系统信息
+                    if (latestData.system) {
+                        agentHtml += `
+                            <div style="margin-bottom: 15px;">
+                                <h4 style="color: #3498db; margin-bottom: 10px; font-size: 1.1em;">📊 系统信息</h4>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; font-size: 0.9em;">
+                                    <div><strong>操作系统:</strong> ${latestData.system.os || 'N/A'}</div>
+                                    <div><strong>内核:</strong> ${latestData.system.kernel || 'N/A'}</div>
+                                    <div><strong>运行时间:</strong> ${latestData.system.uptime || 'N/A'}</div>
+                                    <div><strong>负载:</strong> ${latestData.system.load_average || 'N/A'}</div>
+                                    <div><strong>CPU:</strong> ${latestData.system.cpu_usage ? latestData.system.cpu_usage.toFixed(1) + '%' : 'N/A'}</div>
+                                    <div><strong>内存:</strong> ${latestData.system.memory_usage ? latestData.system.memory_usage.toFixed(1) + '%' : 'N/A'}</div>
+                                    <div><strong>磁盘:</strong> ${latestData.system.disk_usage ? latestData.system.disk_usage.toFixed(1) + '%' : 'N/A'}</div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    // 进程信息（前5个）
+                    if (latestData.processes && latestData.processes.length > 0) {
+                        agentHtml += `
+                            <div style="margin-bottom: 15px;">
+                                <h4 style="color: #e67e22; margin-bottom: 10px; font-size: 1.1em;">⚙️ 主要进程 (前5个)</h4>
+                                <div style="overflow-x: auto;">
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85em;">
+                                        <thead>
+                                            <tr style="background: #f8f9fa;">
+                                                <th style="padding: 6px; border: 1px solid #ddd; text-align: left;">PID</th>
+                                                <th style="padding: 6px; border: 1px solid #ddd; text-align: left;">进程名</th>
+                                                <th style="padding: 6px; border: 1px solid #ddd; text-align: left;">用户</th>
+                                                <th style="padding: 6px; border: 1px solid #ddd; text-align: left;">CPU</th>
+                                                <th style="padding: 6px; border: 1px solid #ddd; text-align: left;">内存</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                        `;
+                        
+                        latestData.processes.slice(0, 5).forEach(proc => {
+                            agentHtml += `
+                                <tr>
+                                    <td style="padding: 6px; border: 1px solid #ddd;">${proc.pid}</td>
+                                    <td style="padding: 6px; border: 1px solid #ddd;">${proc.name || 'N/A'}</td>
+                                    <td style="padding: 6px; border: 1px solid #ddd;">${proc.user || 'N/A'}</td>
+                                    <td style="padding: 6px; border: 1px solid #ddd;">${proc.cpu || 'N/A'}</td>
+                                    <td style="padding: 6px; border: 1px solid #ddd;">${proc.memory || 'N/A'}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        agentHtml += `
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    // 网络连接（前5个）
+                    if (latestData.network && latestData.network.length > 0) {
+                        agentHtml += `
+                            <div style="margin-bottom: 10px;">
+                                <h4 style="color: #27ae60; margin-bottom: 10px; font-size: 1.1em;">🌐 网络连接 (前5个)</h4>
+                                <div style="overflow-x: auto;">
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85em;">
+                                        <thead>
+                                            <tr style="background: #f8f9fa;">
+                                                <th style="padding: 6px; border: 1px solid #ddd; text-align: left;">协议</th>
+                                                <th style="padding: 6px; border: 1px solid #ddd; text-align: left;">本地地址</th>
+                                                <th style="padding: 6px; border: 1px solid #ddd; text-align: left;">远程地址</th>
+                                                <th style="padding: 6px; border: 1px solid #ddd; text-align: left;">状态</th>
+                                                <th style="padding: 6px; border: 1px solid #ddd; text-align: left;">PID</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                        `;
+                        
+                        latestData.network.slice(0, 5).forEach(conn => {
+                            agentHtml += `
+                                <tr>
+                                    <td style="padding: 6px; border: 1px solid #ddd;">${conn.protocol || 'N/A'}</td>
+                                    <td style="padding: 6px; border: 1px solid #ddd;">${conn.local_addr || 'N/A'}:${conn.local_port || ''}</td>
+                                    <td style="padding: 6px; border: 1px solid #ddd;">${conn.remote_addr || 'N/A'}:${conn.remote_port || ''}</td>
+                                    <td style="padding: 6px; border: 1px solid #ddd;">${conn.state || 'N/A'}</td>
+                                    <td style="padding: 6px; border: 1px solid #ddd;">${conn.pid || 'N/A'}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        agentHtml += `
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    }
+                } else {
+                    agentHtml += '<div style="color: #7f8c8d; font-style: italic;">暂无详细数据</div>';
+                }
+                
+                agentHtml += '</div>';
+                return agentHtml;
+                
+            } catch (error) {
+                console.error(`Failed to load details for agent ${agent.agent_id}:`, error);
+                return `
+                    <div class="agent-item" style="flex-direction: column; align-items: stretch; padding: 25px; margin-bottom: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div class="agent-info">
+                                <h3>🖥️ ${agent.hostname}</h3>
+                                <small>ID: ${agent.agent_id}</small><br>
+                                <small>最后上报: ${new Date(agent.last_seen).toLocaleString()}</small>
+                            </div>
+                            <div class="agent-status">
+                                <span class="status ${agent.status}">${getStatusText(agent.status)}</span>
+                                <span class="record-count">${agent.data_count} 条记录</span>
+                            </div>
+                        </div>
+                        <div style="color: #e74c3c; margin-top: 10px;">❌ 详细信息加载失败</div>
+                    </div>
+                `;
+            }
+        }
+        
+        function getStatusText(status) {
+            const statusMap = {
+                'online': '在线',
+                'warning': '警告',
+                'offline': '离线'
+            };
+            return statusMap[status] || status;
+        }
+        
+        function formatUptime(uptime) {
+            // 简化运行时间显示
+            if (uptime.includes('h')) {
+                return uptime.split('h')[0] + '小时';
+            } else if (uptime.includes('m')) {
+                return uptime.split('m')[0] + '分钟';
+            } else {
+                return uptime.split('s')[0] + '秒';
+            }
+        }
+        
+        let knownAgents = new Set();
+        
+        function checkNewAgents(agents) {
+            agents.forEach(agent => {
+                if (!knownAgents.has(agent.agent_id)) {
+                    knownAgents.add(agent.agent_id);
+                    if (knownAgents.size > 1) { // 不为第一次加载时的代理添加日志
+                        addLog(`新代理连接: ${agent.hostname} (${agent.agent_id})`);
+                    }
+                }
+            });
+        }
+        
+
+
+        function addLog(message) {
+            logs.unshift({
+                time: new Date().toLocaleString(),
+                message: message
+            });
+            
+            // 保持最近50条日志
+            if (logs.length > 50) {
+                logs = logs.slice(0, 50);
+            }
+            
+            updateLogs();
+        }
+        
+        function updateLogs() {
+            const logsList = document.getElementById('logs-list');
+            logsList.innerHTML = logs.map(log => `
+                <div class="log-item">
+                    <div class="log-time">${log.time}</div>
+                    <div class="log-message">${log.message}</div>
+                </div>
+            `).join('');
+        }
+        
+        function loadData() {
+            loadStats();
+            loadAgents();
+            addLog('数据已刷新');
+        }
+        
+        // 页面加载时获取数据
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+        });
+        
+        // 每30秒自动刷新
+        setInterval(loadData, 30000);
+        
+        // 每5分钟添加一条心跳日志
+        setInterval(() => {
+            addLog('系统运行正常 - 心跳检测');
+        }, 300000);
+    </script>
+</body>
+</html>

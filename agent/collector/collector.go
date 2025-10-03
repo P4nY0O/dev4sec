@@ -3,7 +3,6 @@ package collector
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -12,47 +11,47 @@ import (
 	"sync"
 	"time"
 
-	"../config"
+	"mini-hids/agent/config"
 )
 
 // Collector 数据采集器
 type Collector struct {
-	config  *config.Config
-	data    map[string]interface{}
-	dataMux sync.RWMutex
+	config  *config.Config         // 配置信息
+	data    map[string]interface{} // 采集到的数据
+	dataMux sync.RWMutex           // 数据读写锁
 }
 
 // ProcessInfo 进程信息
 type ProcessInfo struct {
-	PID     int    `json:"pid"`
-	Name    string `json:"name"`
-	Cmdline string `json:"cmdline"`
-	User    string `json:"user"`
-	CPU     string `json:"cpu"`
-	Memory  string `json:"memory"`
+	PID     int    `json:"pid"`     // 进程ID
+	Name    string `json:"name"`    // 进程名称
+	Cmdline string `json:"cmdline"` // 进程命令行
+	User    string `json:"user"`    // 进程所属用户
+	CPU     string `json:"cpu"`     // CPU占用率
+	Memory  string `json:"memory"`  // 内存占用率
 }
 
 // NetworkConnection 网络连接信息
 type NetworkConnection struct {
-	Protocol    string `json:"protocol"`
-	LocalAddr   string `json:"local_addr"`
-	LocalPort   int    `json:"local_port"`
-	RemoteAddr  string `json:"remote_addr"`
-	RemotePort  int    `json:"remote_port"`
-	State       string `json:"state"`
-	PID         int    `json:"pid"`
+	Protocol   string `json:"protocol"`    // 协议类型（TCP/UDP）
+	LocalAddr  string `json:"local_addr"`  // 本地地址
+	LocalPort  int    `json:"local_port"`  // 本地端口
+	RemoteAddr string `json:"remote_addr"` // 远程地址
+	RemotePort int    `json:"remote_port"` // 远程端口
+	State      string `json:"state"`       // 连接状态
+	PID        int    `json:"pid"`         // 进程ID
 }
 
 // SystemInfo 系统信息
 type SystemInfo struct {
-	Hostname     string  `json:"hostname"`
-	OS           string  `json:"os"`
-	Kernel       string  `json:"kernel"`
-	Uptime       string  `json:"uptime"`
-	LoadAverage  string  `json:"load_average"`
-	CPUUsage     float64 `json:"cpu_usage"`
-	MemoryUsage  float64 `json:"memory_usage"`
-	DiskUsage    float64 `json:"disk_usage"`
+	Hostname    string  `json:"hostname"`     // 主机名
+	OS          string  `json:"os"`           // 操作系统
+	Kernel      string  `json:"kernel"`       // 内核版本
+	Uptime      string  `json:"uptime"`       // 系统运行时间
+	LoadAverage string  `json:"load_average"` // 系统负载平均值
+	CPUUsage    float64 `json:"cpu_usage"`    // CPU占用率
+	MemoryUsage float64 `json:"memory_usage"` // 内存占用率
+	DiskUsage   float64 `json:"disk_usage"`   // 磁盘占用率
 }
 
 // New 创建新的采集器
@@ -104,7 +103,7 @@ func (c *Collector) collectProcesses() []ProcessInfo {
 	var processes []ProcessInfo
 
 	procDir := "/proc"
-	files, err := ioutil.ReadDir(procDir)
+	files, err := os.ReadDir(procDir)
 	if err != nil {
 		log.Printf("Failed to read /proc: %v", err)
 		return processes
@@ -133,7 +132,7 @@ func (c *Collector) collectProcesses() []ProcessInfo {
 func (c *Collector) getProcessInfo(pid int) *ProcessInfo {
 	// 读取进程名称
 	commPath := fmt.Sprintf("/proc/%d/comm", pid)
-	commData, err := ioutil.ReadFile(commPath)
+	commData, err := os.ReadFile(commPath)
 	if err != nil {
 		return nil
 	}
@@ -141,7 +140,7 @@ func (c *Collector) getProcessInfo(pid int) *ProcessInfo {
 
 	// 读取命令行
 	cmdlinePath := fmt.Sprintf("/proc/%d/cmdline", pid)
-	cmdlineData, err := ioutil.ReadFile(cmdlinePath)
+	cmdlineData, err := os.ReadFile(cmdlinePath)
 	if err != nil {
 		return nil
 	}
@@ -294,7 +293,7 @@ func (c *Collector) collectSystemInfo() SystemInfo {
 
 // getOSInfo 获取操作系统信息
 func (c *Collector) getOSInfo() string {
-	data, err := ioutil.ReadFile("/etc/os-release")
+	data, err := os.ReadFile("/etc/os-release")
 	if err != nil {
 		return "Unknown"
 	}
@@ -311,7 +310,7 @@ func (c *Collector) getOSInfo() string {
 
 // getKernelVersion 获取内核版本
 func (c *Collector) getKernelVersion() string {
-	data, err := ioutil.ReadFile("/proc/version")
+	data, err := os.ReadFile("/proc/version")
 	if err != nil {
 		return "Unknown"
 	}
@@ -326,7 +325,7 @@ func (c *Collector) getKernelVersion() string {
 
 // getUptime 获取系统运行时间
 func (c *Collector) getUptime() string {
-	data, err := ioutil.ReadFile("/proc/uptime")
+	data, err := os.ReadFile("/proc/uptime")
 	if err != nil {
 		return "Unknown"
 	}
@@ -343,7 +342,7 @@ func (c *Collector) getUptime() string {
 
 // getLoadAverage 获取系统负载
 func (c *Collector) getLoadAverage() string {
-	data, err := ioutil.ReadFile("/proc/loadavg")
+	data, err := os.ReadFile("/proc/loadavg")
 	if err != nil {
 		return "Unknown"
 	}

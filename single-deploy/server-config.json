@@ -1,0 +1,13 @@
+{
+  "port": 8848,
+  "log_level": "info",
+  "web_dir": "./web",
+  "database": {
+    "type": "sqlite",
+    "path": "./mini-hids.db"
+  },
+  "security": {
+    "enable_auth": false,
+    "api_key": ""
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "server_host": "127.0.0.1",
+  "server_port": 8848,
+  "report_interval": 30,
+  "log_level": "info",
+  "collect_process": true,
+  "collect_file": true,
+  "collect_network": true,
+  "collect_system": true,
+  "watch_paths": [
+    "/etc/passwd",
+    "/etc/shadow",
+    "/etc/hosts",
+    "/var/log/auth.log",
+    "/var/log/secure",
+    "/home",
+    "/root",
+    "/tmp"
+  ]
+}

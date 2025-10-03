@@ -379,7 +379,7 @@ func (s *Server) getTotalRecordCount() int {
 
 // Start 启动服务器
 func (s *Server) Start() error {
-	addr := fmt.Sprintf(":%d", s.port)
+	addr := fmt.Sprintf("0.0.0.0:%d", s.port)
 	log.Printf("Starting server on %s", addr)
 	return http.ListenAndServe(addr, s.mux)
 }
@@ -390,7 +390,7 @@ func main() {
 	startTime = time.Now()
 	
 	// 创建服务器
-	server := NewServer(8080)
+	server := NewServer(8848)
 	
 	// 设置信号处理
 	sigChan := make(chan os.Signal, 1)
@@ -404,7 +404,7 @@ func main() {
 	}()
 	
 	log.Println("Mini-HIDS Server started successfully")
-	log.Println("Dashboard: http://localhost:8080")
+	log.Println("Dashboard: http://localhost:8848")
 	log.Println("API endpoints:")
 	log.Println("  POST /api/agent/data     - Receive agent data")
 	log.Println("  GET  /api/agents         - Get agent list")

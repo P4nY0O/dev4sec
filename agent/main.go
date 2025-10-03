@@ -11,8 +11,8 @@ import (
 	"syscall"
 	"time"
 
-	"./collector"
-	"./config"
+	"mini-hids/agent/collector"
+	"mini-hids/agent/config"
 )
 
 // Agent 主结构体
@@ -24,10 +24,10 @@ type Agent struct {
 
 // AgentData 上报数据结构
 type AgentData struct {
-	Timestamp int64       `json:"timestamp"`
-	Hostname  string      `json:"hostname"`
-	Type      string      `json:"type"`
-	Data      interface{} `json:"data"`
+	AgentID   string                 `json:"agent_id"`
+	Hostname  string                 `json:"hostname"`
+	Timestamp time.Time              `json:"timestamp"`
+	Data      map[string]interface{} `json:"data"`
 }
 
 // NewAgent 创建新的 Agent 实例
@@ -86,18 +86,17 @@ func (a *Agent) reportData() {
 
 	hostname, _ := os.Hostname()
 
-	for dataType, content := range data {
-		agentData := AgentData{
-			Timestamp: time.Now().Unix(),
-			Hostname:  hostname,
-			Type:      dataType,
-			Data:      content,
-		}
+	// 将所有数据类型合并到一个请求中
+	agentData := AgentData{
+		AgentID:   hostname, // 使用hostname作为AgentID
+		Hostname:  hostname,
+		Timestamp: time.Now(),
+		Data:      data,
+	}
 
-		// 发送到服务端
-		if err := a.sendToServer(agentData); err != nil {
-			log.Printf("Failed to send data to server: %v", err)
-		}
+	// 发送到服务端
+	if err := a.sendToServer(agentData); err != nil {
+		log.Printf("Failed to send data to server: %v", err)
 	}
 }
 

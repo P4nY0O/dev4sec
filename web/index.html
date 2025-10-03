@@ -360,19 +360,12 @@
                 
                 const agentsList = document.getElementById('agents-list');
                 if (data.agents && data.agents.length > 0) {
-                    agentsList.innerHTML = data.agents.map(agent => `
-                        <div class="agent-item">
-                            <div class="agent-info">
-                                <h3>🖥️ ${agent.hostname}</h3>
-                                <small>ID: ${agent.agent_id}</small><br>
-                                <small>最后上报: ${new Date(agent.last_seen).toLocaleString()}</small>
-                            </div>
-                            <div class="agent-status">
-                                <span class="status ${agent.status}">${getStatusText(agent.status)}</span>
-                                <span class="record-count">${agent.data_count} 条记录</span>
-                            </div>
-                        </div>
-                    `).join('');
+                    // 为每个agent加载详细信息
+                    let agentsHtml = '';
+                    for (const agent of data.agents) {
+                        agentsHtml += await generateAgentDetailHtml(agent);
+                    }
+                    agentsList.innerHTML = agentsHtml;
                     
                     // 检查新代理
                     checkNewAgents(data.agents);
@@ -383,6 +376,153 @@
                 console.error('Failed to load agents:', error);
                 document.getElementById('agents-list').innerHTML = '<div class="no-data">❌ 加载失败</div>';
                 addLog('代理列表加载失败: ' + error.message);
+            }
+        }
+        
+        async function generateAgentDetailHtml(agent) {
+            try {
+                // 获取agent详细信息
+                const response = await fetch(`/api/agents/${agent.agent_id}`);
+                const data = await response.json();
+                
+                let agentHtml = `
+                    <div class="agent-item" style="flex-direction: column; align-items: stretch; padding: 25px; margin-bottom: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <div class="agent-info">
+                                <h3>🖥️ ${agent.hostname}</h3>
+                                <small>ID: ${agent.agent_id}</small><br>
+                                <small>最后上报: ${new Date(agent.last_seen).toLocaleString()}</small>
+                            </div>
+                            <div class="agent-status">
+                                <span class="status ${agent.status}">${getStatusText(agent.status)}</span>
+                                <span class="record-count">${agent.data_count} 条记录</span>
+                            </div>
+                        </div>
+                `;
+                
+                if (data.data && data.data.length > 0) {
+                    const latestData = data.data[0];
+                    
+                    // 系统信息
+                    if (latestData.system) {
+                        agentHtml += `
+                            <div style="margin-bottom: 15px;">
+                                <h4 style="color: #3498db; margin-bottom: 10px; font-size: 1.1em;">📊 系统信息</h4>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; font-size: 0.9em;">
+                                    <div><strong>操作系统:</strong> ${latestData.system.os || 'N/A'}</div>
+                                    <div><strong>内核:</strong> ${latestData.system.kernel || 'N/A'}</div>
+                                    <div><strong>运行时间:</strong> ${latestData.system.uptime || 'N/A'}</div>
+                                    <div><strong>负载:</strong> ${latestData.system.load_average || 'N/A'}</div>
+                                    <div><strong>CPU:</strong> ${latestData.system.cpu_usage ? latestData.system.cpu_usage.toFixed(1) + '%' : 'N/A'}</div>
+                                    <div><strong>内存:</strong> ${latestData.system.memory_usage ? latestData.system.memory_usage.toFixed(1) + '%' : 'N/A'}</div>
+                                    <div><strong>磁盘:</strong> ${latestData.system.disk_usage ? latestData.system.disk_usage.toFixed(1) + '%' : 'N/A'}</div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    // 进程信息（前5个）
+                    if (latestData.processes && latestData.processes.length > 0) {
+                        agentHtml += `
+                            <div style="margin-bottom: 15px;">
+                                <h4 style="color: #e67e22; margin-bottom: 10px; font-size: 1.1em;">⚙️ 主要进程 (前5个)</h4>
+                                <div style="overflow-x: auto;">
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85em;">
+                                        <thead>
+                                            <tr style="background: #f8f9fa;">
+                                                <th style="padding: 6px; border: 1px solid #ddd; text-align: left;">PID</th>
+                                                <th style="padding: 6px; border: 1px solid #ddd; text-align: left;">进程名</th>
+                                                <th style="padding: 6px; border: 1px solid #ddd; text-align: left;">用户</th>
+                                                <th style="padding: 6px; border: 1px solid #ddd; text-align: left;">CPU</th>
+                                                <th style="padding: 6px; border: 1px solid #ddd; text-align: left;">内存</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                        `;
+                        
+                        latestData.processes.slice(0, 5).forEach(proc => {
+                            agentHtml += `
+                                <tr>
+                                    <td style="padding: 6px; border: 1px solid #ddd;">${proc.pid}</td>
+                                    <td style="padding: 6px; border: 1px solid #ddd;">${proc.name || 'N/A'}</td>
+                                    <td style="padding: 6px; border: 1px solid #ddd;">${proc.user || 'N/A'}</td>
+                                    <td style="padding: 6px; border: 1px solid #ddd;">${proc.cpu || 'N/A'}</td>
+                                    <td style="padding: 6px; border: 1px solid #ddd;">${proc.memory || 'N/A'}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        agentHtml += `
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    // 网络连接（前5个）
+                    if (latestData.network && latestData.network.length > 0) {
+                        agentHtml += `
+                            <div style="margin-bottom: 10px;">
+                                <h4 style="color: #27ae60; margin-bottom: 10px; font-size: 1.1em;">🌐 网络连接 (前5个)</h4>
+                                <div style="overflow-x: auto;">
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85em;">
+                                        <thead>
+                                            <tr style="background: #f8f9fa;">
+                                                <th style="padding: 6px; border: 1px solid #ddd; text-align: left;">协议</th>
+                                                <th style="padding: 6px; border: 1px solid #ddd; text-align: left;">本地地址</th>
+                                                <th style="padding: 6px; border: 1px solid #ddd; text-align: left;">远程地址</th>
+                                                <th style="padding: 6px; border: 1px solid #ddd; text-align: left;">状态</th>
+                                                <th style="padding: 6px; border: 1px solid #ddd; text-align: left;">PID</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                        `;
+                        
+                        latestData.network.slice(0, 5).forEach(conn => {
+                            agentHtml += `
+                                <tr>
+                                    <td style="padding: 6px; border: 1px solid #ddd;">${conn.protocol || 'N/A'}</td>
+                                    <td style="padding: 6px; border: 1px solid #ddd;">${conn.local_addr || 'N/A'}:${conn.local_port || ''}</td>
+                                    <td style="padding: 6px; border: 1px solid #ddd;">${conn.remote_addr || 'N/A'}:${conn.remote_port || ''}</td>
+                                    <td style="padding: 6px; border: 1px solid #ddd;">${conn.state || 'N/A'}</td>
+                                    <td style="padding: 6px; border: 1px solid #ddd;">${conn.pid || 'N/A'}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        agentHtml += `
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    }
+                } else {
+                    agentHtml += '<div style="color: #7f8c8d; font-style: italic;">暂无详细数据</div>';
+                }
+                
+                agentHtml += '</div>';
+                return agentHtml;
+                
+            } catch (error) {
+                console.error(`Failed to load details for agent ${agent.agent_id}:`, error);
+                return `
+                    <div class="agent-item" style="flex-direction: column; align-items: stretch; padding: 25px; margin-bottom: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div class="agent-info">
+                                <h3>🖥️ ${agent.hostname}</h3>
+                                <small>ID: ${agent.agent_id}</small><br>
+                                <small>最后上报: ${new Date(agent.last_seen).toLocaleString()}</small>
+                            </div>
+                            <div class="agent-status">
+                                <span class="status ${agent.status}">${getStatusText(agent.status)}</span>
+                                <span class="record-count">${agent.data_count} 条记录</span>
+                            </div>
+                        </div>
+                        <div style="color: #e74c3c; margin-top: 10px;">❌ 详细信息加载失败</div>
+                    </div>
+                `;
             }
         }
         
@@ -419,6 +559,8 @@
             });
         }
         
+
+
         function addLog(message) {
             logs.unshift({
                 time: new Date().toLocaleString(),

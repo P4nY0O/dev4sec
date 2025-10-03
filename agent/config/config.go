@@ -2,26 +2,25 @@ package config
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"os"
 )
 
 // Config Agent 配置结构
 type Config struct {
-	ServerHost     string `json:"server_host"`
-	ServerPort     int    `json:"server_port"`
+	ServerHost     string `json:"server_host"` // 服务器地址
+	ServerPort     int    `json:"server_port"` // 服务器端口
 	ReportInterval int    `json:"report_interval"` // 上报间隔（秒）
-	LogLevel       string `json:"log_level"`
+	LogLevel       string `json:"log_level"`       // 日志级别
 
 	// 采集配置
-	CollectProcess bool `json:"collect_process"`
-	CollectFile    bool `json:"collect_file"`
-	CollectNetwork bool `json:"collect_network"`
-	CollectSystem  bool `json:"collect_system"`
+	CollectProcess bool `json:"collect_process"` // 是否采集进程信息
+	CollectFile    bool `json:"collect_file"`    // 是否采集文件信息
+	CollectNetwork bool `json:"collect_network"` // 是否采集网络信息
+	CollectSystem  bool `json:"collect_system"`  // 是否采集系统信息
 
 	// 监控路径
-	WatchPaths []string `json:"watch_paths"`
+	WatchPaths []string `json:"watch_paths"` // 监控的文件路径列表
 }
 
 // DefaultConfig 默认配置
@@ -59,7 +58,7 @@ func Load() *Config {
 	}
 
 	// 读取配置文件
-	data, err := ioutil.ReadFile(configPath)
+	data, err := os.ReadFile(configPath)
 	if err != nil {
 		log.Printf("Failed to read config file: %v, using default config", err)
 		return DefaultConfig()
@@ -81,5 +80,5 @@ func (c *Config) Save(path string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(path, data, 0644)
+	return os.WriteFile(path, data, 0644)
 }
